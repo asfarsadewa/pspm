@@ -68,7 +68,7 @@ src/
 │   ├── story-selection.tsx      # Story list and navigation
 │   └── ui/                      # shadcn components
 ├── lib/
-│   ├── actions.ts              # Server actions & API integration
+│   ├── actions.ts              # Server actions & OpenRouter API integration
 │   ├── types.ts                # TypeScript interfaces
 │   └── utils.ts                # Helper functions
 ```
@@ -105,6 +105,12 @@ The app uses Claude 3.5 Sonnet through OpenRouter API with specific prompting:
 - Responses follow a strict format with story content and choices
 - Context management includes character backstory and previous choices
 - Temperature set to 1 for balanced creativity
+- All API interactions handled in actions.ts
+- Story generation includes:
+  - Initial story creation
+  - Context-aware continuation
+  - Choice processing
+  - Response parsing
 
 ## State Management
 
