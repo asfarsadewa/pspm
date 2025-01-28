@@ -20,18 +20,99 @@ export default function StoryPage() {
   const [loading, setLoading] = useState(true);
   const [streamedContent, setStreamedContent] = useState("");
   const [choices, setChoices] = useState<StoryChoice[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const generatingRef = useRef(false);
-  const [currentHistoryIndex, setCurrentHistoryIndex] = useState(0);
-  const initialized = useRef(false);
-  const [isInitializing, setIsInitializing] = useState(false);
-  const storyGenerationRef = useRef<boolean>(false);
   const [characterExists, setCharacterExists] = useState(true);
+  const [processingChoice, setProcessingChoice] = useState<string | null>(null);
+  const [currentHistoryIndex, setCurrentHistoryIndex] = useState(0);
+  const initializingRef = useRef(false);
+
+  const processStream = async (stream: ReadableStream) => {
+    console.log("=== Starting processStream ===");
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    let accumulatedContent = "";
+    let streamComplete = false;
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log("=== Stream done naturally ===");
+          streamComplete = true;
+          break;
+        }
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.slice(6);
+            if (jsonStr === '[DONE]') {
+              console.log("=== Stream received [DONE] marker ===");
+              streamComplete = true;
+              break;
+            }
+
+            try {
+              const data = JSON.parse(jsonStr);
+              
+              // Check for finish_reason
+              if (data.choices?.[0]?.finish_reason === 'stop') {
+                console.log("=== Stream finished with reason: stop ===");
+                streamComplete = true;
+                break;
+              }
+
+              if (data.choices?.[0]?.delta?.content) {
+                const content = data.choices[0].delta.content;
+                accumulatedContent += content;
+                setStreamedContent(accumulatedContent);
+
+                // Still parse choices as they come in for UI feedback
+                if (accumulatedContent.includes('Choices:')) {
+                  const parsedNode = parseStoryResponse(accumulatedContent);
+                  if (parsedNode.choices?.length > 0) {
+                    setChoices(parsedNode.choices);
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing JSON:', e);
+            }
+          }
+        }
+
+        if (streamComplete) break;
+      }
+
+      // Only parse and return content if stream completed successfully
+      if (streamComplete) {
+        console.log("=== Stream completed successfully ===");
+        const parsedNode = parseStoryResponse(accumulatedContent);
+        if (parsedNode.choices?.length > 0) {
+          console.log("Final choices:", parsedNode.choices);
+          setChoices(parsedNode.choices);
+        }
+        return accumulatedContent;
+      } else {
+        console.log("=== Stream did not complete properly ===");
+        throw new Error("Stream did not complete properly");
+      }
+
+    } catch (error) {
+      console.log("=== Error in processStream ===", error);
+      throw error;
+    } finally {
+      reader.releaseLock();
+    }
+  };
 
   useEffect(() => {
     const initializeStory = async () => {
-      if (storyGenerationRef.current) {
-        console.log("Story generation already in progress, skipping...");
+      // Prevent multiple initializations
+      if (initializingRef.current) {
+        console.log("Already initializing story, skipping...");
         return;
       }
 
@@ -44,14 +125,17 @@ export default function StoryPage() {
         }
 
         try {
+          initializingRef.current = true; // Set flag before starting
           const parsedCharacter = JSON.parse(character);
-          
-          storyGenerationRef.current = true;
           setLoading(true);
-          
+
+          // For "new" route, always generate a new story
           console.log("Generating new story...");
-          const { content } = await generateStory(parsedCharacter);
+          const { stream, ok } = await generateStory(parsedCharacter);
           
+          if (!ok || !stream) throw new Error("Failed to get stream");
+          
+          const content = await processStream(stream);
           if (!content) throw new Error("No content received");
           
           const node = parseStoryResponse(content);
@@ -65,7 +149,7 @@ export default function StoryPage() {
             lastUpdated: new Date().toISOString()
           };
 
-          // Save to localStorage
+          // Get existing stories and add the new one
           const savedStories = JSON.parse(localStorage.getItem("stories") || "[]");
           savedStories.unshift(newStory);
           localStorage.setItem("stories", JSON.stringify(savedStories));
@@ -78,7 +162,7 @@ export default function StoryPage() {
           router.push("/");
         } finally {
           setLoading(false);
-          storyGenerationRef.current = false;
+          initializingRef.current = false; // Reset flag when done
         }
       } else {
         loadExistingStory(params.id as string);
@@ -89,6 +173,11 @@ export default function StoryPage() {
   }, [params.id]);
 
   const loadExistingStory = (storyId: string) => {
+    setProcessingChoice(null);
+    setStreamedContent("");
+    setChoices([]);
+    setCurrentHistoryIndex(0);
+
     const savedStories = JSON.parse(localStorage.getItem("stories") || "[]");
     const existingStory = savedStories.find((s: Story) => s.id === storyId);
     
@@ -109,30 +198,54 @@ export default function StoryPage() {
   };
 
   const handleChoice = async (choiceText: string) => {
-    if (!story) return;
+    console.log("=== handleChoice called ===");
+    console.log("Choice text:", choiceText);
+    console.log("Current story:", story?.id);
+    console.log("Current processingChoice:", processingChoice);
+
+    if (!story) {
+      console.log("No story found, exiting");
+      return;
+    }
+
+    if (processingChoice) {
+      console.log("Already processing choice:", processingChoice);
+      console.log("Attempted new choice:", choiceText);
+      return;
+    }
+
+    setProcessingChoice(choiceText);
 
     try {
-      setLoading(true);
+      console.log("=== Starting choice generation ===");
       setStreamedContent("");
+      setChoices([]);
       
-      console.log("Processing choice for story ID:", story.id);
-      
-      const storyContext = story.history.map(node => ({
-        content: node.content,
-        choice: node.selectedChoice
-      }));
-      
-      const { content } = await generateStory(
+      const { stream, ok } = await generateStory(
         story.character,
         story.currentNode.content,
         choiceText,
-        storyContext
+        story.history.map(node => ({
+          content: node.content,
+          choice: node.selectedChoice
+        }))
       );
+
+      if (!ok || !stream) {
+        setProcessingChoice(null);
+        throw new Error("Failed to get stream");
+      }
+      
+      const content = await processStream(stream);
+      
+      if (!content) {
+        setProcessingChoice(null);
+        throw new Error("No content received");
+      }
 
       const node = parseStoryResponse(content);
       node.selectedChoice = choiceText;
 
-      // Update the existing story, maintaining the same ID
       const updatedStory = {
         ...story,
         history: [...story.history, { ...story.currentNode, selectedChoice: choiceText }],
@@ -140,31 +253,22 @@ export default function StoryPage() {
         lastUpdated: new Date().toISOString()
       };
 
-      // Update in localStorage by ID
+      // Save to localStorage
       const savedStories = JSON.parse(localStorage.getItem("stories") || "[]");
       const storyIndex = savedStories.findIndex((s: Story) => s.id === story.id);
       
       if (storyIndex !== -1) {
-        // Update existing story
         savedStories[storyIndex] = updatedStory;
-      } else {
-        // Should never happen, but handle just in case
-        console.error("Story not found in localStorage:", story.id);
-        savedStories.unshift(updatedStory);
+        localStorage.setItem("stories", JSON.stringify(savedStories));
       }
 
-      // Save back to localStorage
-      localStorage.setItem("stories", JSON.stringify(savedStories));
-      
-      // Update local state
       setStory(updatedStory);
-      setStreamedContent(content);
+      setProcessingChoice(null);
 
     } catch (error) {
-      console.error("Error processing choice:", error);
+      console.error("=== Error in handleChoice ===", error);
       toast.error("Failed to continue the story. Please try again.");
-    } finally {
-      setLoading(false);
+      setProcessingChoice(null);
     }
   };
 
@@ -179,6 +283,15 @@ export default function StoryPage() {
       setCurrentHistoryIndex(prev => prev - 1);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      setProcessingChoice(null);
+      setStreamedContent("");
+      setChoices([]);
+      setCurrentHistoryIndex(0);
+    };
+  }, [params.id]);
 
   if (loading) {
     return (
@@ -217,21 +330,22 @@ export default function StoryPage() {
       <Card className="mb-6">
         <CardContent className="prose dark:prose-invert mt-6 max-w-none">
           <ReactMarkdown>
-            {loading && streamedContent ? streamedContent : story?.currentNode.content || ''}
+            {processingChoice ? streamedContent : story.currentNode.content}
           </ReactMarkdown>
         </CardContent>
       </Card>
 
       <div className="space-y-3">
-        {!loading && story?.currentNode.choices.map((choice) => (
+        {(processingChoice ? choices : story.currentNode.choices).map((choice) => (
           <Button
             key={choice.id}
             onClick={() => handleChoice(choice.text)}
             className="w-full text-left h-auto whitespace-normal"
             variant="outline"
-            disabled={loading || !characterExists}
+            disabled={!characterExists}
           >
             {choice.text}
+            {processingChoice === choice.text && <Spinner className="ml-2 h-4 w-4" />}
           </Button>
         ))}
       </div>

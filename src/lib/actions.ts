@@ -30,13 +30,9 @@ Choices:
 Always include the "Choices:" header followed by numbered options.
 Keep story segments between 100-200 words for better pacing.`;
 
-  // Build the complete story context
-  let contextPrompt = '';
-  if (storyContext && storyContext.length > 0) {
-    contextPrompt = storyContext.map(ctx => 
-      `${ctx.content}\n${ctx.choice ? `Player chose: ${ctx.choice}` : ''}`
-    ).join('\n\n');
-  }
+  const contextPrompt = storyContext?.map(ctx => 
+    `${ctx.content}\n${ctx.choice ? `Player chose: ${ctx.choice}` : ''}`
+  ).join('\n\n') || '';
 
   try {
     const response = await fetch(API_URL, {
@@ -45,15 +41,13 @@ Keep story segments between 100-200 words for better pacing.`;
         "Content-Type": "application/json",
         "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
         "HTTP-Referer": `${process.env.NEXT_PUBLIC_APP_URL}`,
-        "X-Title": "Pilih Sendiri Petualanganmu"
+        "X-Title": "Pilih Sendiri Petualanganmu",
+        "Accept": "text/event-stream",
       },
       body: JSON.stringify({
         model: "anthropic/claude-3.5-sonnet",
         messages: [
-          { 
-            role: "system", 
-            content: systemPrompt 
-          },
+          { role: "system", content: systemPrompt },
           {
             role: "user",
             content: `Character Name: ${character.name}
@@ -65,8 +59,8 @@ Continue the story and provide 2-3 choices.`
           }
         ],
         max_tokens: 8192,
-        stream: false,
-        temperature: 1 // Add some creativity while maintaining coherence
+        stream: true,
+        temperature: 1
       })
     });
 
@@ -74,13 +68,7 @@ Continue the story and provide 2-3 choices.`
       throw new Error(`API Error: ${response.status} - ${await response.text()}`);
     }
 
-    const data = await response.json();
-    // console.log("Raw API response:", data);
-
-    const content = data.choices[0].message.content;
-    // console.log("Story content:", content);
-
-    return { content };
+    return { stream: response.body, ok: response.ok };
 
   } catch (error) {
     console.error("Error generating story:", error);
