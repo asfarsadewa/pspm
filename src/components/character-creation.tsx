@@ -37,10 +37,19 @@ export function CharacterCreation({ onCreateCharacter, existingCharacter }: Char
     setIsEditing(false);
   };
 
-  const handleDelete = () => {
+  const handleDeleteCharacter = () => {
+    // Archive stories for this character before deleting
+    const savedStories = JSON.parse(localStorage.getItem("stories") || "[]");
+    const updatedStories = savedStories.map((story: Story) => {
+      if (story.character.name === existingCharacter?.name) {
+        return { ...story, archived: true };
+      }
+      return story;
+    });
+    localStorage.setItem("stories", JSON.stringify(updatedStories));
+
+    // Then delete the character
     localStorage.removeItem("character");
-    setName("");
-    setBackstory("");
     onCreateCharacter(null);
   };
 
@@ -62,7 +71,7 @@ export function CharacterCreation({ onCreateCharacter, existingCharacter }: Char
             </div>
             <div className="flex gap-2">
               <Button onClick={() => setIsEditing(true)}>Edit Character</Button>
-              <Button variant="destructive" onClick={handleDelete}>Delete Character</Button>
+              <Button variant="destructive" onClick={handleDeleteCharacter}>Delete Character</Button>
             </div>
           </div>
         </CardContent>

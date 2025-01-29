@@ -57,7 +57,6 @@ export default function StoryPage() {
             try {
               const data = JSON.parse(jsonStr);
               
-              // Check for finish_reason
               if (data.choices?.[0]?.finish_reason === 'stop') {
                 console.log("=== Stream finished with reason: stop ===");
                 streamComplete = true;
@@ -69,11 +68,16 @@ export default function StoryPage() {
                 accumulatedContent += content;
                 setStreamedContent(accumulatedContent);
 
-                // Still parse choices as they come in for UI feedback
                 if (accumulatedContent.includes('Choices:')) {
-                  const parsedNode = parseStoryResponse(accumulatedContent);
-                  if (parsedNode.choices?.length > 0) {
-                    setChoices(parsedNode.choices);
+                  const parts = accumulatedContent.split(/\n(?:Options|Choices):\s*\n/i);
+                  if (parts.length > 1) {
+                    const choicesText = parts[1].trim();
+                    const choiceMatches = choicesText.match(/^\s*\d+\.\s*(.+)$/gm) || [];
+                    if (choiceMatches.length >= 2) {
+                      const parsedNode = parseStoryResponse(accumulatedContent);
+                      console.log("Setting interim choices:", parsedNode.choices);
+                      setChoices(parsedNode.choices);
+                    }
                   }
                 }
               }
@@ -86,12 +90,11 @@ export default function StoryPage() {
         if (streamComplete) break;
       }
 
-      // Only parse and return content if stream completed successfully
       if (streamComplete) {
         console.log("=== Stream completed successfully ===");
         const parsedNode = parseStoryResponse(accumulatedContent);
         if (parsedNode.choices?.length > 0) {
-          console.log("Final choices:", parsedNode.choices);
+          console.log("Setting final choices:", parsedNode.choices);
           setChoices(parsedNode.choices);
         }
         return accumulatedContent;
@@ -110,7 +113,6 @@ export default function StoryPage() {
 
   useEffect(() => {
     const initializeStory = async () => {
-      // Prevent multiple initializations
       if (initializingRef.current) {
         console.log("Already initializing story, skipping...");
         return;
@@ -125,13 +127,11 @@ export default function StoryPage() {
         }
 
         try {
-          initializingRef.current = true; // Set flag before starting
-          const parsedCharacter = JSON.parse(character);
+          initializingRef.current = true;
           setLoading(true);
 
-          // For "new" route, always generate a new story
           console.log("Generating new story...");
-          const { stream, ok } = await generateStory(parsedCharacter);
+          const { stream, ok } = await generateStory(JSON.parse(character));
           
           if (!ok || !stream) throw new Error("Failed to get stream");
           
@@ -142,14 +142,13 @@ export default function StoryPage() {
           const storyId = `story-${Date.now()}`;
           const newStory: Story = {
             id: storyId,
-            title: `${parsedCharacter.name}'s Adventure`,
+            title: `${JSON.parse(character).name}'s Adventure`,
             currentNode: node,
             history: [],
-            character: parsedCharacter,
+            character: JSON.parse(character),
             lastUpdated: new Date().toISOString()
           };
 
-          // Get existing stories and add the new one
           const savedStories = JSON.parse(localStorage.getItem("stories") || "[]");
           savedStories.unshift(newStory);
           localStorage.setItem("stories", JSON.stringify(savedStories));
@@ -162,7 +161,7 @@ export default function StoryPage() {
           router.push("/");
         } finally {
           setLoading(false);
-          initializingRef.current = false; // Reset flag when done
+          initializingRef.current = false;
         }
       } else {
         loadExistingStory(params.id as string);
@@ -182,15 +181,19 @@ export default function StoryPage() {
     const existingStory = savedStories.find((s: Story) => s.id === storyId);
     
     if (existingStory) {
-      setStory(existingStory);
-      // Check if the character still exists
       const character = localStorage.getItem("character");
-      if (character) {
-        const parsedCharacter = JSON.parse(character);
-        setCharacterExists(parsedCharacter.name === existingStory.character.name);
-      } else {
-        setCharacterExists(false);
+      const parsedCharacter = character ? JSON.parse(character) : null;
+      
+      if (!parsedCharacter) {
+        existingStory.archived = true;
+        const updatedStories = savedStories.map((s: Story) => 
+          s.id === storyId ? existingStory : s
+        );
+        localStorage.setItem("stories", JSON.stringify(updatedStories));
       }
+
+      setStory(existingStory);
+      setCharacterExists(!!parsedCharacter && parsedCharacter.name === existingStory.character.name);
     } else {
       router.push("/");
     }
@@ -253,7 +256,6 @@ export default function StoryPage() {
         lastUpdated: new Date().toISOString()
       };
 
-      // Save to localStorage
       const savedStories = JSON.parse(localStorage.getItem("stories") || "[]");
       const storyIndex = savedStories.findIndex((s: Story) => s.id === story.id);
       
@@ -313,16 +315,25 @@ export default function StoryPage() {
   return (
     <div className="container mx-auto p-4 max-w-2xl">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">{story.title}</h1>
+        <div>
+          <h1 className="text-2xl font-bold">{story.title}</h1>
+          {story.archived && (
+            <Badge variant="secondary" className="mt-2">
+              Archived Story
+            </Badge>
+          )}
+        </div>
         <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
           Exit Story
         </Button>
       </div>
       
-      {!characterExists && (
-        <div className="mb-4 p-4 bg-muted rounded-lg text-center">
+      {(story.archived || !characterExists) && (
+        <div className="mb-4 p-4 bg-muted rounded-lg text-center border border-muted-foreground/20">
           <p className="text-muted-foreground">
-            This story's character has been deleted. Create a character with the name "{story.character.name}" to continue this adventure.
+            {story.archived 
+              ? "This story is archived because its character was deleted. You can view the story but cannot continue it."
+              : `This story's character has been deleted. Create a character with the name "${story.character.name}" to continue this adventure.`}
           </p>
         </div>
       )}
@@ -336,13 +347,23 @@ export default function StoryPage() {
       </Card>
 
       <div className="space-y-3">
-        {(processingChoice ? choices : story.currentNode.choices).map((choice) => (
+        {!processingChoice && story.currentNode.choices.map((choice) => (
           <Button
             key={choice.id}
             onClick={() => handleChoice(choice.text)}
             className="w-full text-left h-auto whitespace-normal"
             variant="outline"
-            disabled={!characterExists}
+            disabled={!characterExists || story.archived}
+          >
+            {choice.text}
+          </Button>
+        ))}
+        {processingChoice && choices.map((choice) => (
+          <Button
+            key={choice.id}
+            className="w-full text-left h-auto whitespace-normal"
+            variant="outline"
+            disabled={true}
           >
             {choice.text}
             {processingChoice === choice.text && <Spinner className="ml-2 h-4 w-4" />}
@@ -389,12 +410,10 @@ export default function StoryPage() {
                   <div 
                     className="absolute inset-0 z-10"
                     onClick={(e) => {
-                      // Prevent double click events
                       e.stopPropagation();
                       if (index === currentHistoryIndex) {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const x = e.clientX - rect.left;
-                        // Click on left half goes back, right half goes forward
                         if (x < rect.width / 2) {
                           prevHistoryCard();
                         } else {
