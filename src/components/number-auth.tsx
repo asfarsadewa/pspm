@@ -37,7 +37,6 @@ export function NumberAuth({ onComplete }: NumberAuthProps) {
   }, []);
 
   const handleNumberClick = (value: number) => {
-    const targetIndex = userSequence.length;
     const newUserSequence = [...userSequence, value];
     setUserSequence(newUserSequence);
 
