@@ -113,6 +113,35 @@ export default function StoryPage() {
   };
 
   useEffect(() => {
+    const loadExistingStory = (storyId: string) => {
+      setProcessingChoice(null);
+      setStreamedContent("");
+      setChoices([]);
+      setCurrentHistoryIndex(0);
+
+      const savedStories = JSON.parse(localStorage.getItem("stories") || "[]");
+      const existingStory = savedStories.find((s: Story) => s.id === storyId);
+      
+      if (existingStory) {
+        const character = localStorage.getItem("character");
+        const parsedCharacter = character ? JSON.parse(character) : null;
+        
+        if (!parsedCharacter) {
+          existingStory.archived = true;
+          const updatedStories = savedStories.map((s: Story) => 
+            s.id === storyId ? existingStory : s
+          );
+          localStorage.setItem("stories", JSON.stringify(updatedStories));
+        }
+
+        setStory(existingStory);
+        setCharacterExists(!!parsedCharacter && parsedCharacter.name === existingStory.character.name);
+      } else {
+        router.push("/");
+      }
+      setLoading(false);
+    };
+
     const initializeStory = async () => {
       if (initializingRef.current) {
         console.log("Already initializing story, skipping...");
@@ -171,35 +200,6 @@ export default function StoryPage() {
 
     initializeStory();
   }, [params.id]);
-
-  const loadExistingStory = (storyId: string) => {
-    setProcessingChoice(null);
-    setStreamedContent("");
-    setChoices([]);
-    setCurrentHistoryIndex(0);
-
-    const savedStories = JSON.parse(localStorage.getItem("stories") || "[]");
-    const existingStory = savedStories.find((s: Story) => s.id === storyId);
-    
-    if (existingStory) {
-      const character = localStorage.getItem("character");
-      const parsedCharacter = character ? JSON.parse(character) : null;
-      
-      if (!parsedCharacter) {
-        existingStory.archived = true;
-        const updatedStories = savedStories.map((s: Story) => 
-          s.id === storyId ? existingStory : s
-        );
-        localStorage.setItem("stories", JSON.stringify(updatedStories));
-      }
-
-      setStory(existingStory);
-      setCharacterExists(!!parsedCharacter && parsedCharacter.name === existingStory.character.name);
-    } else {
-      router.push("/");
-    }
-    setLoading(false);
-  };
 
   const handleChoice = async (choiceText: string) => {
     console.log("=== handleChoice called ===");
