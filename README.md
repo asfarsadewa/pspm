@@ -1,6 +1,6 @@
 # Pilih Sendiri Petualanganmu (Choose Your Own Adventure)
 
-An interactive storytelling application built with Next.js 15, where users create characters and make choices that shape their adventure. The app uses Claude 3.5 Sonnet to generate dynamic, contextual story content.
+An interactive storytelling application built with Next.js 15, where users create characters and make choices that shape their adventure. The app uses Claude 3.5 Sonnet to generate dynamic, contextual story content in Indonesian language.
 
 ## Tech Stack
 
@@ -41,13 +41,15 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - Persistent character storage using localStorage
 - Character-story relationship management
 - Edit/Delete functionality with state sync
+- Automatic story archiving when character is deleted
 
 ### Story Generation
 - Dynamic story generation using Claude 3.5 Sonnet
 - Context-aware story continuation based on previous choices
 - Multiple choice system (2-3 options per scene)
 - Story state persistence
-- Archived stories support
+- Archived stories support (view-only mode)
+- Streaming responses with real-time UI updates
 
 ### Interactive UI
 - Card-based story display
@@ -55,17 +57,22 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - Loading states and error handling
 - Responsive design for mobile/desktop
 - Toast notifications for user feedback
+- Dark/Light theme support with system preference detection
+- Streaming content display with choice updates
+- Story history with interactive card stack and swipe navigation
 
 ## Project Structure
 
 ```
 src/
 ├── app/
-│   ├── page.tsx                 # Home page with character creation
+│   ├── layout.tsx              # Root layout with theme provider
+│   ├── page.tsx                # Home page with character creation
 │   └── story/[id]/page.tsx      # Dynamic story page
 ├── components/
 │   ├── character-creation.tsx   # Character management UI
-│   ├── story-selection.tsx      # Story list and navigation
+│   ├── story-selection.tsx       # Story list and navigation
+│   ├── theme-toggle.tsx          # Theme switcher component
 │   └── ui/                      # shadcn components
 ├── lib/
 │   ├── actions.ts              # Server actions & OpenRouter API integration
@@ -120,6 +127,9 @@ The app uses Claude 3.5 Sonnet through OpenRouter API with specific prompting:
   - Archived stories below
   - Each story maintains its complete history
 - Real-time state sync using storage events and intervals
+- Theme preference stored and synced across sessions
+- Streaming state management for real-time updates
+- Processing states to prevent duplicate actions
 
 ## UI/UX Features
 
@@ -135,6 +145,12 @@ The app uses Claude 3.5 Sonnet through OpenRouter API with specific prompting:
 - Edit/View modes
 - Character-story relationship checks
 - Deletion safeguards
+
+### Theme Support
+- Light/Dark mode toggle
+- System preference detection
+- Smooth theme transitions
+- Persistent theme preference
 
 ## Story Generation Logic
 
