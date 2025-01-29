@@ -2,7 +2,6 @@
 
 import { CharacterCreation } from "@/components/character-creation";
 import { StorySelection } from "@/components/story-selection";
-import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Character } from "@/lib/types";

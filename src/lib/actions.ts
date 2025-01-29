@@ -1,6 +1,6 @@
 'use server'
 
-import { Character, StoryNode, StoryContext } from "@/lib/types";
+import { Character, StoryContext } from "@/lib/types";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const API_URL = "https://openrouter.ai/api/v1/chat/completions";
