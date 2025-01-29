@@ -9,6 +9,7 @@ import { TrashIcon } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
+import type { Character } from "@/lib/types";
 
 interface SavedStory {
   id: string;
