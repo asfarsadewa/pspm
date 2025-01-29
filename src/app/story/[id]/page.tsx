@@ -12,6 +12,7 @@ import type { Story, StoryNode, Character, StoryChoice } from "@/lib/types";
 import { parseStoryResponse } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function StoryPage() {
   const params = useParams();
@@ -313,173 +314,178 @@ export default function StoryPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">{story.title}</h1>
-          {story.archived && (
-            <Badge variant="secondary" className="mt-2">
-              Archived Story
-            </Badge>
-          )}
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
-          Exit Story
-        </Button>
-      </div>
-      
-      {(story.archived || !characterExists) && (
-        <div className="mb-4 p-4 bg-muted rounded-lg text-center border border-muted-foreground/20">
-          <p className="text-muted-foreground">
-            {story.archived 
-              ? "This story is archived because its character was deleted. You can view the story but cannot continue it."
-              : `This story's character has been deleted. Create a character with the name "${story.character.name}" to continue this adventure.`}
-          </p>
-        </div>
-      )}
-
-      <Card className="mb-6">
-        <CardContent className="prose dark:prose-invert mt-6 max-w-none">
-          <ReactMarkdown>
-            {processingChoice ? streamedContent : story.currentNode.content}
-          </ReactMarkdown>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-3">
-        {!processingChoice && story.currentNode.choices.map((choice) => (
-          <Button
-            key={choice.id}
-            onClick={() => handleChoice(choice.text)}
-            className="w-full text-left h-auto whitespace-normal"
-            variant="outline"
-            disabled={!characterExists || story.archived}
-          >
-            {choice.text}
-          </Button>
-        ))}
-        {processingChoice && choices.map((choice) => (
-          <Button
-            key={choice.id}
-            className="w-full text-left h-auto whitespace-normal"
-            variant="outline"
-            disabled={true}
-          >
-            {choice.text}
-            {processingChoice === choice.text && <Spinner className="ml-2 h-4 w-4" />}
-          </Button>
-        ))}
-      </div>
-
-      {story.history.length > 0 && (
-        <div className="mt-6 pt-6 border-t">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-semibold">Story History</h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setCurrentHistoryIndex(0)}
-              disabled={currentHistoryIndex === 0}
-            >
-              <RotateCcw className="h-4 w-4" />
+    <div className="container mx-auto p-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">{story.title}</h1>
+            {story.archived && (
+              <Badge variant="secondary" className="mt-2">
+                Archived Story
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
+              Exit Story
             </Button>
           </div>
-          <div className="relative min-h-[300px] mt-4">
-            <div className="relative w-full">
-              {story.history.map((node, index) => (
-                <Card 
-                  key={node.id} 
-                  className={`absolute w-full transition-all duration-300 cursor-pointer 
-                    ${index === currentHistoryIndex
-                      ? "z-20 rotate-0 translate-x-0 translate-y-0 opacity-100 shadow-lg hover:shadow-xl hover:-translate-y-1 bg-card"
-                      : index === currentHistoryIndex - 1
-                      ? "z-10 -rotate-6 -translate-x-4 translate-y-2 opacity-80 shadow-md bg-muted"
-                      : index === currentHistoryIndex + 1
-                      ? "z-10 rotate-6 translate-x-4 translate-y-2 opacity-80 shadow-md bg-muted"
-                      : "opacity-0"
-                    }
-                    ${index === currentHistoryIndex ? "hover:ring-2 ring-primary/20" : ""}
-                  `}
-                  onClick={() => {
-                    if (index === currentHistoryIndex) {
-                      nextHistoryCard();
-                    }
-                  }}
-                >
-                  <div 
-                    className="absolute inset-0 z-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (index === currentHistoryIndex) {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const x = e.clientX - rect.left;
-                        if (x < rect.width / 2) {
-                          prevHistoryCard();
-                        } else {
-                          nextHistoryCard();
-                        }
-                      }
-                    }}
-                  />
-                  <div className="absolute -top-3 -left-3 z-30">
-                    <Badge 
-                      variant="secondary" 
-                      className="h-6 w-6 rounded-full flex items-center justify-center p-0"
-                    >
-                      {index + 1}
-                    </Badge>
-                  </div>
-                  <CardContent className="pt-6">
-                    <div className="prose dark:prose-invert max-w-none">
-                      <ReactMarkdown>{node.content}</ReactMarkdown>
-                      {node.selectedChoice && (
-                        <div className="mt-2 text-sm text-muted-foreground">
-                          Chose: {node.selectedChoice}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+        </div>
+        
+        {(story.archived || !characterExists) && (
+          <div className="mb-4 p-4 bg-muted rounded-lg text-center border border-muted-foreground/20">
+            <p className="text-muted-foreground">
+              {story.archived 
+                ? "This story is archived because its character was deleted. You can view the story but cannot continue it."
+                : `This story's character has been deleted. Create a character with the name "${story.character.name}" to continue this adventure.`}
+            </p>
+          </div>
+        )}
 
-            <div className="absolute inset-0 flex items-center justify-between pointer-events-none">
+        <Card className="mb-6">
+          <CardContent className="prose dark:prose-invert mt-6 max-w-none">
+            <ReactMarkdown>
+              {processingChoice ? streamedContent : story.currentNode.content}
+            </ReactMarkdown>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-3">
+          {!processingChoice && story.currentNode.choices.map((choice) => (
+            <Button
+              key={choice.id}
+              onClick={() => handleChoice(choice.text)}
+              className="w-full text-left h-auto whitespace-normal"
+              variant="outline"
+              disabled={!characterExists || story.archived}
+            >
+              {choice.text}
+            </Button>
+          ))}
+          {processingChoice && choices.map((choice) => (
+            <Button
+              key={choice.id}
+              className="w-full text-left h-auto whitespace-normal"
+              variant="outline"
+              disabled={true}
+            >
+              {choice.text}
+              {processingChoice === choice.text && <Spinner className="ml-2 h-4 w-4" />}
+            </Button>
+          ))}
+        </div>
+
+        {story.history.length > 0 && (
+          <div className="mt-6 pt-6 border-t">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-lg font-semibold">Story History</h2>
               <Button
                 variant="ghost"
                 size="icon"
-                className={`pointer-events-auto ${currentHistoryIndex === 0 ? 'opacity-0' : 'opacity-100'}`}
-                onClick={prevHistoryCard}
+                className="h-8 w-8"
+                onClick={() => setCurrentHistoryIndex(0)}
                 disabled={currentHistoryIndex === 0}
               >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`pointer-events-auto ${
-                  currentHistoryIndex === story.history.length - 1 ? 'opacity-0' : 'opacity-100'
-                }`}
-                onClick={nextHistoryCard}
-                disabled={currentHistoryIndex === story.history.length - 1}
-              >
-                <ChevronRight className="h-4 w-4" />
+                <RotateCcw className="h-4 w-4" />
               </Button>
             </div>
+            <div className="relative min-h-[300px] mt-4">
+              <div className="relative w-full">
+                {story.history.map((node, index) => (
+                  <Card 
+                    key={node.id} 
+                    className={`absolute w-full transition-all duration-300 cursor-pointer 
+                      ${index === currentHistoryIndex
+                        ? "z-20 rotate-0 translate-x-0 translate-y-0 opacity-100 shadow-lg hover:shadow-xl hover:-translate-y-1 bg-card"
+                        : index === currentHistoryIndex - 1
+                        ? "z-10 -rotate-6 -translate-x-4 translate-y-2 opacity-80 shadow-md bg-muted"
+                        : index === currentHistoryIndex + 1
+                        ? "z-10 rotate-6 translate-x-4 translate-y-2 opacity-80 shadow-md bg-muted"
+                        : "opacity-0"
+                      }
+                      ${index === currentHistoryIndex ? "hover:ring-2 ring-primary/20" : ""}
+                    `}
+                    onClick={() => {
+                      if (index === currentHistoryIndex) {
+                        nextHistoryCard();
+                      }
+                    }}
+                  >
+                    <div 
+                      className="absolute inset-0 z-10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (index === currentHistoryIndex) {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const x = e.clientX - rect.left;
+                          if (x < rect.width / 2) {
+                            prevHistoryCard();
+                          } else {
+                            nextHistoryCard();
+                          }
+                        }
+                      }}
+                    />
+                    <div className="absolute -top-3 -left-3 z-30">
+                      <Badge 
+                        variant="secondary" 
+                        className="h-6 w-6 rounded-full flex items-center justify-center p-0"
+                      >
+                        {index + 1}
+                      </Badge>
+                    </div>
+                    <CardContent className="pt-6">
+                      <div className="prose dark:prose-invert max-w-none">
+                        <ReactMarkdown>{node.content}</ReactMarkdown>
+                        {node.selectedChoice && (
+                          <div className="mt-2 text-sm text-muted-foreground">
+                            Chose: {node.selectedChoice}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1">
-              {story.history.map((_, index) => (
-                <div
-                  key={index}
-                  className={`h-1.5 w-1.5 rounded-full transition-all ${
-                    index === currentHistoryIndex ? 'bg-primary w-3' : 'bg-muted'
+              <div className="absolute inset-0 flex items-center justify-between pointer-events-none">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`pointer-events-auto ${currentHistoryIndex === 0 ? 'opacity-0' : 'opacity-100'}`}
+                  onClick={prevHistoryCard}
+                  disabled={currentHistoryIndex === 0}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`pointer-events-auto ${
+                    currentHistoryIndex === story.history.length - 1 ? 'opacity-0' : 'opacity-100'
                   }`}
-                />
-              ))}
+                  onClick={nextHistoryCard}
+                  disabled={currentHistoryIndex === story.history.length - 1}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1">
+                {story.history.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`h-1.5 w-1.5 rounded-full transition-all ${
+                      index === currentHistoryIndex ? 'bg-primary w-3' : 'bg-muted'
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 } 

@@ -5,6 +5,7 @@ import { StorySelection } from "@/components/story-selection";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Home() {
   const router = useRouter();
@@ -30,9 +31,14 @@ export default function Home() {
 
   return (
     <div className="container mx-auto p-4 min-h-screen">
-      <h1 className="text-4xl font-bold text-center mb-8">
-        Pilih Sendiri Petualanganmu
-      </h1>
+      <div className="relative mb-8 max-w-2xl mx-auto">
+        <h1 className="text-4xl font-bold text-center">
+          Pilih Sendiri Petualanganmu
+        </h1>
+        <div className="absolute right-0 top-1/2 -translate-y-1/2">
+          <ThemeToggle />
+        </div>
+      </div>
       <div className="max-w-2xl mx-auto space-y-6">
         <CharacterCreation 
           onCreateCharacter={handleCreateCharacter} 
