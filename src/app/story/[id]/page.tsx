@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +25,10 @@ export default function StoryPage() {
   const [processingChoice, setProcessingChoice] = useState<string | null>(null);
   const [currentHistoryIndex, setCurrentHistoryIndex] = useState(0);
   const initializingRef = useRef(false);
+
+  const handleRouterPush = useCallback((path: string) => {
+    router.push(path);
+  }, [router]);
 
   const processStream = async (stream: ReadableStream) => {
     console.log("=== Starting processStream ===");
@@ -137,7 +141,7 @@ export default function StoryPage() {
         setStory(existingStory);
         setCharacterExists(!!parsedCharacter && parsedCharacter.name === existingStory.character.name);
       } else {
-        router.push("/");
+        handleRouterPush("/");
       }
       setLoading(false);
     };
@@ -152,7 +156,7 @@ export default function StoryPage() {
         const character = localStorage.getItem("character");
         if (!character) {
           console.error("No character found in localStorage");
-          router.push("/");
+          handleRouterPush("/");
           return;
         }
 
@@ -188,7 +192,7 @@ export default function StoryPage() {
         } catch (error) {
           console.error("Error initializing story:", error);
           toast.error("Failed to start the story. Please try again.");
-          router.push("/");
+          handleRouterPush("/");
         } finally {
           setLoading(false);
           initializingRef.current = false;
@@ -199,7 +203,7 @@ export default function StoryPage() {
     };
 
     initializeStory();
-  }, [params.id]);
+  }, [params.id, handleRouterPush]);
 
   const handleChoice = async (choiceText: string) => {
     console.log("=== handleChoice called ===");
@@ -308,7 +312,7 @@ export default function StoryPage() {
     return (
       <div className="container mx-auto p-4 text-center">
         <p className="mb-4">Story not found</p>
-        <Button onClick={() => router.push("/")}>Return Home</Button>
+        <Button onClick={() => handleRouterPush("/")}>Return Home</Button>
       </div>
     );
   }
@@ -327,7 +331,7 @@ export default function StoryPage() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
+            <Button variant="ghost" size="sm" onClick={() => handleRouterPush("/")}>
               Exit Story
             </Button>
           </div>
