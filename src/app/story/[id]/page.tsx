@@ -8,7 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { generateStory } from "@/lib/actions";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
-import type { Story, StoryNode, Character, StoryChoice } from "@/lib/types";
+import type { Story, StoryChoice } from "@/lib/types";
 import { parseStoryResponse } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
