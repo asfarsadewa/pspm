@@ -1,6 +1,6 @@
 # Pilih Sendiri Petualanganmu (Choose Your Own Adventure)
 
-An interactive storytelling application built with Next.js 15, where users create characters and make choices that shape their adventure. The app uses Claude 3.5 Sonnet to generate dynamic, contextual story content in Indonesian language.
+An interactive storytelling application built with Next.js 15, where users create characters and make choices that shape their adventure. The app uses Google's Gemini 2.0 Flash to generate dynamic, contextual story content.
 
 ## Tech Stack
 
@@ -9,7 +9,7 @@ An interactive storytelling application built with Next.js 15, where users creat
 - **UI Components**: shadcn/ui
 - **Styling**: Tailwind CSS
 - **State Management**: React Hooks + localStorage
-- **AI Integration**: Anthropic Claude 3.5 Sonnet via OpenRouter API
+- **AI Integration**: Google Gemini 2.0 Flash via Google AI API
 - **Markdown**: ReactMarkdown for story rendering
 
 ## Getting Started
@@ -18,7 +18,7 @@ First, set up your environment variables:
 
 ```bash
 # .env
-OPENROUTER_API_KEY=your_api_key
+GEMINI_API_KEY=your_api_key
 NEXT_PUBLIC_APP_URL=your_app_url
 ```
 
@@ -44,7 +44,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - Automatic story archiving when character is deleted
 
 ### Story Generation
-- Dynamic story generation using Claude 3.5 Sonnet
+- Dynamic story generation using Gemini 2.0 Flash
 - Context-aware story continuation based on previous choices
 - Multiple choice system (2-3 options per scene)
 - Story state persistence
@@ -75,7 +75,7 @@ src/
 │   ├── theme-toggle.tsx          # Theme switcher component
 │   └── ui/                      # shadcn components
 ├── lib/
-│   ├── actions.ts              # Server actions & OpenRouter API integration
+│   ├── actions.ts              # Server actions & Google AI API integration
 │   ├── types.ts                # TypeScript interfaces
 │   └── utils.ts                # Helper functions
 ```
@@ -107,17 +107,19 @@ interface StoryNode {
 
 ## AI Integration
 
-The app uses Claude 3.5 Sonnet through OpenRouter API with specific prompting:
+The app uses Gemini 2.0 Flash through Google's AI API with specific prompting:
 - Story segments are kept between 100-200 words
 - Responses follow a strict format with story content and choices
 - Context management includes character backstory and previous choices
-- Temperature set to 1 for balanced creativity
+- Temperature set to 1 for creative variation
+- Top-P and Top-K settings for balanced output
 - All API interactions handled in actions.ts
 - Story generation includes:
   - Initial story creation
   - Context-aware continuation
   - Choice processing
   - Response parsing
+- Fast response times with Gemini 2.0 Flash model
 
 ## State Management
 
@@ -174,8 +176,7 @@ The story generation follows these steps:
 To learn more about the technologies used:
 - [Next.js Documentation](https://nextjs.org/docs)
 - [shadcn/ui Documentation](https://ui.shadcn.com)
-- [Claude API Documentation](https://docs.anthropic.com/claude/docs)
-- [OpenRouter Documentation](https://openrouter.ai/docs)
+- [Google Gemini API Documentation](https://ai.google.dev/gemini-api/docs)
 
 ## Deploy on Vercel
 

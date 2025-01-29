@@ -6,7 +6,6 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { NumberAuth } from "@/components/number-auth";
-import RootLayoutServer from "./layout-server";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -32,25 +31,20 @@ export default function RootLayout({
   if (!mounted) return null;
 
   return (
-    <RootLayoutServer>
-      <html lang="en" suppressHydrationWarning>
-        <head />
-        <body className={inter.className}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {!isAuthed ? (
-              <NumberAuth onComplete={handleAuthComplete} />
-            ) : (
-              children
-            )}
-            <Toaster />
-          </ThemeProvider>
-        </body>
-      </html>
-    </RootLayoutServer>
+    <body className={inter.className}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        {!isAuthed ? (
+          <NumberAuth onComplete={handleAuthComplete} />
+        ) : (
+          children
+        )}
+        <Toaster />
+      </ThemeProvider>
+    </body>
   );
 }

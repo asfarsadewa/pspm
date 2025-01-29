@@ -38,75 +38,24 @@ export default function StoryPage() {
     let streamComplete = false;
 
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        
-        if (done) {
-          console.log("=== Stream done naturally ===");
-          streamComplete = true;
-          break;
-        }
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const jsonStr = line.slice(6);
-            if (jsonStr === '[DONE]') {
-              console.log("=== Stream received [DONE] marker ===");
-              streamComplete = true;
-              break;
-            }
-
-            try {
-              const data = JSON.parse(jsonStr);
-              
-              if (data.choices?.[0]?.finish_reason === 'stop') {
-                console.log("=== Stream finished with reason: stop ===");
-                streamComplete = true;
-                break;
-              }
-
-              if (data.choices?.[0]?.delta?.content) {
-                const content = data.choices[0].delta.content;
-                accumulatedContent += content;
-                setStreamedContent(accumulatedContent);
-
-                if (accumulatedContent.includes('Choices:')) {
-                  const parts = accumulatedContent.split(/\n(?:Options|Choices):\s*\n/i);
-                  if (parts.length > 1) {
-                    const choicesText = parts[1].trim();
-                    const choiceMatches = choicesText.match(/^\s*\d+\.\s*(.+)$/gm) || [];
-                    if (choiceMatches.length >= 2) {
-                      const parsedNode = parseStoryResponse(accumulatedContent);
-                      console.log("Setting interim choices:", parsedNode.choices);
-                      setChoices(parsedNode.choices);
-                    }
-                  }
-                }
-              }
-            } catch (e) {
-              console.error('Error parsing JSON:', e);
-            }
-          }
-        }
-
-        if (streamComplete) break;
+      const { value } = await reader.read();
+      if (value) {
+        accumulatedContent = decoder.decode(value);
+        setStreamedContent(accumulatedContent);
       }
 
-      if (streamComplete) {
-        console.log("=== Stream completed successfully ===");
-        const parsedNode = parseStoryResponse(accumulatedContent);
-        if (parsedNode.choices?.length > 0) {
-          console.log("Setting final choices:", parsedNode.choices);
-          setChoices(parsedNode.choices);
-        }
-        return accumulatedContent;
-      } else {
-        console.log("=== Stream did not complete properly ===");
-        throw new Error("Stream did not complete properly");
+      console.log("=== Stream completed successfully ===");
+      const parsedNode = parseStoryResponse(accumulatedContent);
+      if (parsedNode.choices?.length > 0) {
+        console.log("Setting final choices:", parsedNode.choices);
+        setChoices(parsedNode.choices);
       }
+      
+      if (!accumulatedContent || !parsedNode.choices?.length) {
+        throw new Error("Invalid response format");
+      }
+
+      return accumulatedContent;
 
     } catch (error) {
       console.log("=== Error in processStream ===", error);
@@ -349,9 +298,18 @@ export default function StoryPage() {
 
         <Card className="mb-6">
           <CardContent className="prose dark:prose-invert mt-6 max-w-none">
-            <ReactMarkdown>
-              {processingChoice ? streamedContent : story.currentNode.content}
-            </ReactMarkdown>
+            {processingChoice ? (
+              <>
+                <div className="flex justify-center items-center min-h-[100px] mb-4">
+                  <Spinner className="h-8 w-8" />
+                </div>
+                {streamedContent && (
+                  <ReactMarkdown>{streamedContent}</ReactMarkdown>
+                )}
+              </>
+            ) : (
+              <ReactMarkdown>{story.currentNode.content}</ReactMarkdown>
+            )}
           </CardContent>
         </Card>
 
@@ -367,17 +325,16 @@ export default function StoryPage() {
               {choice.text}
             </Button>
           ))}
-          {processingChoice && choices.map((choice) => (
-            <Button
-              key={choice.id}
-              className="w-full text-left h-auto whitespace-normal"
-              variant="outline"
-              disabled={true}
-            >
-              {choice.text}
-              {processingChoice === choice.text && <Spinner className="ml-2 h-4 w-4" />}
-            </Button>
-          ))}
+          {processingChoice && (
+            <div className="space-y-3 animate-pulse">
+              {[1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-full h-12 bg-muted rounded-md"
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {story.history.length > 0 && (
