@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import type { Character, Story } from "@/lib/types";
 
 interface CharacterCreationProps {
-  onCreateCharacter: (character: Character) => void;
+  onCreateCharacter: (character: Character | null) => void;
   existingCharacter: Character | null;
 }
 
