@@ -20,7 +20,6 @@ export default function StoryPage() {
   const [story, setStory] = useState<Story | null>(null);
   const [loading, setLoading] = useState(true);
   const [streamedContent, setStreamedContent] = useState("");
-  const [choices, setChoices] = useState<StoryChoice[]>([]);
   const [characterExists, setCharacterExists] = useState(true);
   const [processingChoice, setProcessingChoice] = useState<string | null>(null);
   const [currentHistoryIndex, setCurrentHistoryIndex] = useState(0);
@@ -35,7 +34,6 @@ export default function StoryPage() {
     const reader = stream.getReader();
     const decoder = new TextDecoder();
     let accumulatedContent = "";
-    let streamComplete = false;
 
     try {
       const { value } = await reader.read();
@@ -48,7 +46,6 @@ export default function StoryPage() {
       const parsedNode = parseStoryResponse(accumulatedContent);
       if (parsedNode.choices?.length > 0) {
         console.log("Setting final choices:", parsedNode.choices);
-        setChoices(parsedNode.choices);
       }
       
       if (!accumulatedContent || !parsedNode.choices?.length) {
@@ -69,7 +66,6 @@ export default function StoryPage() {
     const loadExistingStory = (storyId: string) => {
       setProcessingChoice(null);
       setStreamedContent("");
-      setChoices([]);
       setCurrentHistoryIndex(0);
 
       const savedStories = JSON.parse(localStorage.getItem("stories") || "[]");
@@ -176,7 +172,6 @@ export default function StoryPage() {
     try {
       console.log("=== Starting choice generation ===");
       setStreamedContent("");
-      setChoices([]);
       
       const { stream, ok } = await generateStory(
         story.character,
@@ -244,7 +239,6 @@ export default function StoryPage() {
     return () => {
       setProcessingChoice(null);
       setStreamedContent("");
-      setChoices([]);
       setCurrentHistoryIndex(0);
     };
   }, [params.id]);
